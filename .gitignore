@@ -14,7 +14,8 @@ venv/
 
 # Output folders and generated files
 outputs/visual_check/
-outputs/preprocessed/*.csv
+outputs/preprocessed/*
+!outputs/preprocessed/.gitkeep
 
 # VS Code settings
 .vscode/
