@@ -13,3 +13,14 @@ LOG_DIR = OUTPUT_ROOT / "logs"
 # 自动创建输出文件夹
 for p in [OUTPUT_ROOT, VISUAL_DIR, PREPROCESS_DIR, LOG_DIR]:
     p.mkdir(parents=True, exist_ok=True)
+
+
+# ============================================================
+# Coordinate setting
+# ============================================================
+# 本项目统一使用 DAIR-V2X 的 world 坐标系作为协同感知统一坐标系
+COORDINATE_SYSTEM = "world"
+
+# 任务损失权重，后续可以调整
+LAMBDA_LOC = 1.0
+LAMBDA_COUNT = 1.0
