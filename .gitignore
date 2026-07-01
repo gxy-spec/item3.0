@@ -13,9 +13,8 @@ venv/
 .env.*
 
 # Output folders and generated files
-outputs/visual_check/
-outputs/preprocessed/*
-!outputs/preprocessed/.gitkeep
+outputs/
+!outputs/.gitkeep
 
 # VS Code settings
 .vscode/
