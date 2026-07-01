@@ -1,0 +1,20 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Virtual environments
+venv/
+.env/
+.env.*
+
+# Output folders and generated files
+outputs/visual_check/
+outputs/preprocessed/*.csv
+
+# VS Code settings
+.vscode/
