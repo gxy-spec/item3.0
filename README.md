@@ -2,7 +2,7 @@
 
 本项目用于 DAIR-V2X-C 数据集的本地数据检查、索引构建、坐标转换、检测结果评价与可视化。
 
-当前重点实验是：
+当前重点工作是 Day1 双 LiDAR 3D 检测 baseline：
 
 ```text
 实验一：Vehicle LiDAR-only 3D 检测 baseline
@@ -15,9 +15,22 @@ vehicle-side LiDAR 点云
 -> 输出漏检、误检、数量误差、定位误差、分类指标、AP/mAP 和可视化
 ```
 
+```text
+Day1 扩展：Infrastructure LiDAR-only 3D 检测 baseline
+
+infrastructure-side LiDAR 点云
+-> PointPillars / OpenPCDet 路侧端 3D 检测
+-> infrastructure LiDAR 坐标系下的 3D box
+-> world 坐标系
+-> 与同一 cooperative label_world GT 评价
+-> 与 Vehicle LiDAR-only 进行统一指标对比
+```
+
 实验一的完整说明见：
 
 - [实验一文档：Vehicle LiDAR-only 3D 检测 baseline](docs/experiment1_vehicle_lidar_baseline.md)
+- [Day1 文档：双 LiDAR baseline 构建、评价与对比](docs/day1_dual_lidar_baseline.md)
+- [统一预测 JSON 格式](docs/predictions_json_format.md)
 
 ## 项目结构
 
@@ -26,6 +39,8 @@ vehicle-side LiDAR 点云
 - `outputs/preprocessed/`：预处理索引和统计结果。
 - `outputs/visual_check/`：数据可视化检查结果。
 - `outputs/baselines/vehicle_lidar/`：实验一检测、转换、评价和可视化结果。
+- `outputs/baselines/infrastructure_lidar/`：路侧 LiDAR-only 检测、转换、评价和可视化结果。
+- `outputs/baselines/day1_lidar_baseline_summary.*`：双 LiDAR 的最终可审计汇总表。
 - `notes/`：官方 DAIR-V2X / MMDetection3D 环境搭建备注。
 
 ## 数据路径
@@ -170,6 +185,12 @@ find /home/gxy/projects/item3/OpenPCDet/output -type f -name "result.pkl" | sort
 
 ### 阶段 3：导出为 item3.0 统一预测格式
 
+所有 baseline 的 `predictions_*.json` 都必须遵循同一套预测 JSON 标准。标准格式见：
+
+```text
+dair_v2x_project/docs/predictions_json_format.md
+```
+
 ```bash
 conda run --no-capture-output -n dair-baseline python dair_v2x_project/export_vehicle_lidar_predictions.py \
   --input /home/gxy/projects/item3/OpenPCDet/output/custom_models/pointpillar_custom_vehicle/veh_lidar_pointpillar_80e_eval/eval/epoch_80/val/default/result.pkl \
@@ -183,6 +204,15 @@ conda run --no-capture-output -n dair-baseline python dair_v2x_project/export_ve
 dair_v2x_project/outputs/baselines/vehicle_lidar/predictions_vehicle_lidar.json
 dair_v2x_project/outputs/baselines/vehicle_lidar/predictions_vehicle_lidar_summary.json
 ```
+
+格式校验：
+
+```bash
+conda run --no-capture-output -n dair-baseline python dair_v2x_project/validate_predictions_format.py \
+  dair_v2x_project/outputs/baselines/vehicle_lidar/predictions_vehicle_lidar.json
+```
+
+注意：`vehicle_id` 不是统一模板必填字段。`sensor` 和 `source_id` 是推荐字段，缺失时只给 warning，不作为错误。
 
 ### 阶段 4：转换到 world 坐标并评价
 
@@ -208,22 +238,38 @@ dair_v2x_project/outputs/baselines/vehicle_lidar/visualization/
 
 这些文件的详细解释见 [实验一文档](docs/experiment1_vehicle_lidar_baseline.md)。
 
-## 当前 80 epoch 结果摘要
+## Day1 双 LiDAR 结果摘要
 
-当前已经完成一轮 Vehicle LiDAR-only PointPillars 80 epoch baseline 评价。
+当前已完成 Vehicle LiDAR-only 与 Infrastructure LiDAR-only 的真实 OpenPCDet PointPillars 80 epoch 推理、world 坐标转换和统一评价。两端均使用相同的 9 个验证样本和 cooperative `label_world` GT。
 
 ```text
-验证样本数: 9
-预测框总数: 205
-mean_precision: 0.3357
-mean_recall: 0.2987
-mean_f1: 0.3053
-matched classification accuracy: 1.0000
-BEV mAP@0.50: 0.2085
-3D mAP@0.50: 0.1689
+Vehicle LiDAR-only
+  num_pred / num_match / FN / FP: 205 / 70 / 169 / 135
+  precision / recall / F1: 0.3357 / 0.2987 / 0.3053
+  BEV mAP@0.50 / 3D mAP@0.50: 0.2085 / 0.1689
+
+Infrastructure LiDAR-only
+  num_pred / num_match / FN / FP: 164 / 141 / 98 / 23
+  precision / recall / F1: 0.8582 / 0.5888 / 0.6979
+  BEV mAP@0.50 / 3D mAP@0.50: 0.3898 / 0.2741
 ```
 
-当前预测只包含 `Car` 类，因此分类准确率只表示“已匹配目标中 Car 是否被预测成 Car”，不能解释为完整的 Car/Pedestrian/Cyclist 三分类能力。
+最终汇总命令：
+
+```bash
+conda run --no-capture-output -n dair-baseline python \
+  dair_v2x_project/generate_day1_lidar_baseline_summary.py
+```
+
+输出文件：
+
+```text
+dair_v2x_project/outputs/baselines/day1_lidar_baseline_summary.csv
+dair_v2x_project/outputs/baselines/day1_lidar_baseline_summary.json
+dair_v2x_project/outputs/baselines/day1_lidar_summary_visualization/
+```
+
+详细流程、指标解释与文件说明见 [Day1 双 LiDAR baseline 文档](docs/day1_dual_lidar_baseline.md)。
 
 ## 无检测器的工程自检
 

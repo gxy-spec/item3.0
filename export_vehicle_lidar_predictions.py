@@ -269,6 +269,8 @@ def export_official_predictions(input_path, score_threshold):
                 "sample_id": sample_id,
                 "coordinate_system": "vehicle_lidar",
                 "prediction_type": "dair_v2x_official_vehicle_lidar_pointpillars",
+                "sensor": "vehicle_lidar",
+                "source_id": sample_id,
                 "source_file": str(path),
                 "pred_objects": objects,
             }
@@ -329,6 +331,8 @@ def export_openpcdet_predictions(input_path, score_threshold):
                 "sample_id": sample_id,
                 "coordinate_system": "vehicle_lidar",
                 "prediction_type": "openpcdet_vehicle_lidar_pointpillars",
+                "sensor": "vehicle_lidar",
+                "source_id": sample_id,
                 "source_file": str(input_path),
                 "pred_objects": objects,
             }

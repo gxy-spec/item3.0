@@ -1,0 +1,3 @@
+﻿baseline,prediction_type,num_samples,num_gt,num_pred,num_match,FN,FP,mean_precision,mean_recall,mean_f1,classification_accuracy,BEV_mAP@0.50,3D_mAP@0.50,mean_loc_error_bev,mean_loc_error_3d,mean_count_error,engineering_validation_warning
+Vehicle LiDAR-only,openpcdet_vehicle_lidar_pointpillars,9,239,205,70,169,135,0.3357300698732924,0.29868175432691557,0.3052585492497919,1.0,0.20845249734837168,0.168907183651889,0.5207049453423012,0.574519605147067,7.111111111111111,False
+Infrastructure LiDAR-only,openpcdet_infrastructure_lidar_pointpillars,9,239,164,141,98,23,0.8582499959047946,0.5888482783644073,0.697865809509503,1.0,0.3897823978917163,0.2741174841537508,0.7253738549221347,0.7608545933632955,8.333333333333334,False

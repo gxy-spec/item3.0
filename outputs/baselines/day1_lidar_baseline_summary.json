@@ -1,0 +1,58 @@
+{
+  "summary_csv": "/home/gxy/projects/item3/dair_v2x_project/outputs/baselines/day1_lidar_baseline_summary.csv",
+  "visualization_dir": "/home/gxy/projects/item3/dair_v2x_project/outputs/baselines/day1_lidar_summary_visualization",
+  "rows": [
+    {
+      "baseline": "Vehicle LiDAR-only",
+      "prediction_type": "openpcdet_vehicle_lidar_pointpillars",
+      "num_samples": 9,
+      "num_gt": 239,
+      "num_pred": 205,
+      "num_match": 70,
+      "FN": 169,
+      "FP": 135,
+      "mean_precision": 0.3357300698732924,
+      "mean_recall": 0.29868175432691557,
+      "mean_f1": 0.3052585492497919,
+      "classification_accuracy": 1.0,
+      "BEV_mAP@0.50": 0.20845249734837168,
+      "3D_mAP@0.50": 0.168907183651889,
+      "mean_loc_error_bev": 0.5207049453423012,
+      "mean_loc_error_3d": 0.574519605147067,
+      "mean_count_error": 7.111111111111111,
+      "engineering_validation_warning": false,
+      "evaluation_summary_path": "/home/gxy/projects/item3/dair_v2x_project/outputs/baselines/vehicle_lidar/vehicle_lidar_eval_summary.json",
+      "ap_summary_path": "/home/gxy/projects/item3/dair_v2x_project/outputs/baselines/vehicle_lidar/vehicle_lidar_ap_summary.json"
+    },
+    {
+      "baseline": "Infrastructure LiDAR-only",
+      "prediction_type": "openpcdet_infrastructure_lidar_pointpillars",
+      "num_samples": 9,
+      "num_gt": 239,
+      "num_pred": 164,
+      "num_match": 141,
+      "FN": 98,
+      "FP": 23,
+      "mean_precision": 0.8582499959047946,
+      "mean_recall": 0.5888482783644073,
+      "mean_f1": 0.697865809509503,
+      "classification_accuracy": 1.0,
+      "BEV_mAP@0.50": 0.3897823978917163,
+      "3D_mAP@0.50": 0.2741174841537508,
+      "mean_loc_error_bev": 0.7253738549221347,
+      "mean_loc_error_3d": 0.7608545933632955,
+      "mean_count_error": 8.333333333333334,
+      "engineering_validation_warning": false,
+      "evaluation_summary_path": "/home/gxy/projects/item3/dair_v2x_project/outputs/baselines/infrastructure_lidar/infrastructure_lidar_eval_summary.json",
+      "ap_summary_path": "/home/gxy/projects/item3/dair_v2x_project/outputs/baselines/infrastructure_lidar/infrastructure_lidar_ap_summary.json"
+    }
+  ],
+  "warnings": [],
+  "image_paths": {
+    "precision_recall_f1": "/home/gxy/projects/item3/dair_v2x_project/outputs/baselines/day1_lidar_summary_visualization/day1_lidar_precision_recall_f1.png",
+    "fn_fp": "/home/gxy/projects/item3/dair_v2x_project/outputs/baselines/day1_lidar_summary_visualization/day1_lidar_fn_fp_comparison.png",
+    "count_error": "/home/gxy/projects/item3/dair_v2x_project/outputs/baselines/day1_lidar_summary_visualization/day1_lidar_count_error_comparison.png",
+    "loc_error": "/home/gxy/projects/item3/dair_v2x_project/outputs/baselines/day1_lidar_summary_visualization/day1_lidar_loc_error_comparison.png",
+    "ap": "/home/gxy/projects/item3/dair_v2x_project/outputs/baselines/day1_lidar_summary_visualization/day1_lidar_ap_comparison.png"
+  }
+}

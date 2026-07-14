@@ -892,7 +892,8 @@ def plot_world_compare(
     save_path,
     classification_accuracy=None,
     precision=None,
-    recall=None
+    recall=None,
+    baseline_label="Vehicle LiDAR-only"
 ):
     """
     一张图展示：
@@ -1008,7 +1009,7 @@ def plot_world_compare(
     recall_text = "N/A" if recall is None else f"{recall:.3f}"
 
     plt.title(
-        f"Vehicle LiDAR-only vs cooperative label_world | {sample_id}\n"
+        f"{baseline_label} vs cooperative label_world | {sample_id}\n"
         f"GT={len(gt_objects)}, Pred={len(pred_objects)}, "
         f"Match={len(matches)}, Missed={len(missed_gt)}, False Pred={len(false_pred)}\n"
         f"Matched classification accuracy={cls_acc_text}, "
@@ -1032,7 +1033,7 @@ def plot_world_compare(
     plt.close()
 
 
-def plot_summary(eval_df):
+def plot_summary(eval_df, baseline_label="Vehicle LiDAR-only"):
     SUMMARY_VIS_DIR.mkdir(parents=True, exist_ok=True)
 
     metric_names = [
@@ -1064,7 +1065,7 @@ def plot_summary(eval_df):
     plt.figure(figsize=(9, 5))
     plt.bar(metric_names, metric_values)
     plt.ylabel("Average value")
-    plt.title("Vehicle LiDAR-only baseline summary")
+    plt.title(f"{baseline_label} baseline summary")
     plt.xticks(rotation=25)
     plt.tight_layout()
     plt.savefig(SUMMARY_VIS_DIR / "metric_summary_bar.png", dpi=220)

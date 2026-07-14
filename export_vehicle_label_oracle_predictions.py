@@ -120,6 +120,8 @@ def main():
             "sample_id": sample_id,
             "coordinate_system": "vehicle_lidar",
             "prediction_type": "vehicle_lidar_label_oracle",
+            "sensor": "vehicle_lidar",
+            "source_id": sample_id,
             "note": "This file uses vehicle-side LiDAR labels as detector-like outputs for engineering validation.",
             "pred_objects": objects
         })

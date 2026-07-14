@@ -13,10 +13,16 @@ venv/
 .env.*
 
 # Output folders and generated files
-outputs/
+outputs/*
 !outputs/.gitkeep
+!outputs/baselines/
+outputs/baselines/*
+!outputs/baselines/infrastructure_lidar/
+outputs/baselines/infrastructure_lidar/*
+!outputs/baselines/infrastructure_lidar/README.md
+!outputs/baselines/day1_lidar_baseline_summary.csv
+!outputs/baselines/day1_lidar_baseline_summary.json
 
 # VS Code settings
 .vscode/
 notes/
-

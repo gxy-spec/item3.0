@@ -178,6 +178,23 @@ dair_v2x_project/outputs/baselines/vehicle_lidar/predictions_vehicle_lidar.json
 
 这是从 OpenPCDet `result.pkl` 导出的统一预测格式，仍然在 vehicle LiDAR 坐标系下。
 
+该文件已经被固定为所有 baseline 的统一预测输出模板。完整标准见：
+
+```text
+dair_v2x_project/docs/predictions_json_format.md
+```
+
+统一模板的样本级必填字段为：
+
+```text
+sample_id
+coordinate_system
+prediction_type
+pred_objects
+```
+
+`vehicle_id` 不是必填字段。`sensor` 和 `source_id` 是推荐字段，缺失时只给 warning，不作为错误。
+
 每个样本记录通常包含：
 
 - `sample_id`：样本 ID。

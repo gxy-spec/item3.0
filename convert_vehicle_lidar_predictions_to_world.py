@@ -374,8 +374,10 @@ def main():
             "sample_id": sample_id,
             "vehicle_id": vehicle_id,
             "coordinate_system": "world",
-            "source_coordinate_system": "vehicle_lidar",
+            "source_coordinate_system": record.get("coordinate_system", "vehicle_lidar"),
             "prediction_type": record.get("prediction_type", "unknown"),
+            "sensor": record.get("sensor", "vehicle_lidar"),
+            "source_id": record.get("source_id", sample_id),
             "pred_objects": pred_objects_world
         })
 
