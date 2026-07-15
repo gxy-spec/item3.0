@@ -17,6 +17,14 @@ BASELINES = {
         "display_name": "Infrastructure LiDAR-only",
         "root": PROJECT_ROOT / "outputs" / "baselines" / "infrastructure_lidar",
     },
+    "vehicle_camera": {
+        "display_name": "Vehicle Camera-only",
+        "root": PROJECT_ROOT / "outputs" / "baselines" / "vehicle_camera",
+    },
+    "infrastructure_camera": {
+        "display_name": "Infrastructure Camera-only",
+        "root": PROJECT_ROOT / "outputs" / "baselines" / "infrastructure_camera",
+    },
 }
 
 

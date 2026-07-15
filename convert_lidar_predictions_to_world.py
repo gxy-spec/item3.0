@@ -54,6 +54,45 @@ SENSOR_CONFIGS = {
             "corners_3d_sensor",
         ],
     },
+    # ImVoxelNet consumes an image but predicts boxes in the sensor LiDAR frame.
+    # Reuse the verified LiDAR-to-world calibration chains for those boxes.
+    "vehicle_camera": {
+        "input_name": "predictions_vehicle_camera.json",
+        "output_dir": BASELINE_ROOT / "vehicle_camera",
+        "source_coordinate_system": "vehicle_lidar",
+        "coordinate_transform": (
+            "vehicle_camera model output (vehicle_lidar) -> lidar_to_novatel -> novatel_to_world -> world"
+        ),
+        "center_fields": ["center_lidar", "center_vehicle_lidar", "center_sensor"],
+        "box_fields": ["box_lidar", "box_vehicle_lidar", "box_sensor"],
+        "corner_fields": ["corners_3d_lidar", "corners_3d_vehicle_lidar", "corners_3d_sensor"],
+    },
+    "infrastructure_camera": {
+        "input_name": "predictions_infrastructure_camera.json",
+        "output_dir": BASELINE_ROOT / "infrastructure_camera",
+        "source_coordinate_system": "infrastructure_lidar",
+        "coordinate_transform": (
+            "infrastructure_camera model output (infrastructure_lidar/virtuallidar) -> virtuallidar_to_world -> world"
+        ),
+        "center_fields": [
+            "center_lidar",
+            "center_infrastructure_lidar",
+            "center_virtuallidar",
+            "center_sensor",
+        ],
+        "box_fields": [
+            "box_lidar",
+            "box_infrastructure_lidar",
+            "box_virtuallidar",
+            "box_sensor",
+        ],
+        "corner_fields": [
+            "corners_3d_lidar",
+            "corners_3d_infrastructure_lidar",
+            "corners_3d_virtuallidar",
+            "corners_3d_sensor",
+        ],
+    },
 }
 
 
@@ -167,7 +206,7 @@ def resolve_sample_info(record, sensor, mappings):
     if not sample_id:
         raise KeyError("预测记录缺少 sample_id")
 
-    if sensor == "vehicle_lidar":
+    if sensor in {"vehicle_lidar", "vehicle_camera"}:
         candidates = [sample_id, source_id, str(record.get("vehicle_id", ""))]
         for candidate in candidates:
             if candidate in mappings["vehicle"]:
@@ -178,7 +217,7 @@ def resolve_sample_info(record, sensor, mappings):
             f"sample_id={sample_id}, source_id={source_id}"
         )
 
-    if sensor == "infrastructure_lidar":
+    if sensor in {"infrastructure_lidar", "infrastructure_camera"}:
         candidates = [
             source_id,
             str(record.get("infrastructure_id", "")),
@@ -235,10 +274,10 @@ def get_infrastructure_lidar_to_world(infrastructure_id):
 
 
 def get_lidar_to_world_transform(sensor, sample_info):
-    if sensor == "vehicle_lidar":
+    if sensor in {"vehicle_lidar", "vehicle_camera"}:
         return get_vehicle_lidar_to_world(sample_info["vehicle_id"])
 
-    if sensor == "infrastructure_lidar":
+    if sensor in {"infrastructure_lidar", "infrastructure_camera"}:
         return get_infrastructure_lidar_to_world(sample_info["infrastructure_id"])
 
     raise ValueError(f"不支持的 sensor: {sensor}")
@@ -494,7 +533,7 @@ def build_world_record(record, sample_info, sensor, config, pred_objects_world):
         "source_id": record.get(
             "source_id",
             sample_info["vehicle_id"]
-            if sensor == "vehicle_lidar"
+            if sensor in {"vehicle_lidar", "vehicle_camera"}
             else sample_info["infrastructure_id"],
         ),
         "pred_objects": pred_objects_world,
