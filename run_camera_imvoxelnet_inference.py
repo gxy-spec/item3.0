@@ -15,7 +15,6 @@ from config import DATA_ROOT, PROJECT_ROOT
 ITEM3_ROOT = PROJECT_ROOT.parent
 DAIR_ROOT = ITEM3_ROOT / "DAIR-V2X"
 CONFIG_PATH = PROJECT_ROOT / "configs" / "imvoxelnet_mmdet3d_1x_camera.py"
-COOPERATIVE_INFO_PATH = DATA_ROOT / "cooperative" / "data_info.json"
 
 SENSORS = {
     "vehicle_camera": {
@@ -54,9 +53,9 @@ def load_info(path):
     return value
 
 
-def make_cooperative_mappings():
+def make_cooperative_mappings(data_root):
     by_infrastructure = {}
-    for item in load_json(COOPERATIVE_INFO_PATH):
+    for item in load_json(data_root / "cooperative" / "data_info.json"):
         vehicle_id = Path(item.get("vehicle_pointcloud_path", "")).stem
         infrastructure_id = Path(item.get("infrastructure_pointcloud_path", "")).stem
         if vehicle_id and infrastructure_id:
@@ -91,11 +90,16 @@ def prediction_record(sensor, frame_id, instances, class_names, infra_to_vehicle
             raise ValueError(f"{frame_id}: ImVoxelNet 预测框维度小于 7: {box}")
         label = int(label)
         class_name = class_names[label] if 0 <= label < len(class_names) else f"unknown_{label}"
+        # MMDetection3D LiDARInstance3DBoxes stores z at the bottom centre
+        # (origin=(0.5, 0.5, 0)).  The project prediction schema uses the
+        # geometric centre, matching DAIR local labels and world conversion.
+        center_lidar = [float(value) for value in box[:3]]
+        center_lidar[2] += float(box[5]) / 2.0
         pred_objects.append(
             {
                 "class": class_name,
                 "score": float(score),
-                "center_lidar": [float(value) for value in box[:3]],
+                "center_lidar": center_lidar,
                 "box_lidar": {
                     "dx": float(box[3]),
                     "dy": float(box[4]),
@@ -103,6 +107,7 @@ def prediction_record(sensor, frame_id, instances, class_names, infra_to_vehicle
                     "heading": float(box[6]),
                 },
                 "source": "mmdet3d_1x_imvoxelnet_camera_only",
+                "box_origin": "geometric_center",
             }
         )
 
@@ -120,8 +125,9 @@ def prediction_record(sensor, frame_id, instances, class_names, infra_to_vehicle
 
 def run(args):
     config = SENSORS[args.sensor]
-    sensor_root = DATA_ROOT / config["data_dir"]
-    info_path = sensor_root / f"mmdet3d_camera_infos_{args.split}.pkl"
+    data_root = Path(args.data_root).resolve()
+    sensor_root = data_root / config["data_dir"]
+    info_path = Path(args.info_path) if args.info_path else sensor_root / f"mmdet3d_camera_infos_{args.split}.pkl"
     checkpoint = Path(args.checkpoint) if args.checkpoint else config["checkpoint"]
     output_path = Path(args.output) if args.output else config["output_dir"] / config["prediction_file"]
     summary_path = output_path.with_name(output_path.stem + "_summary.json")
@@ -135,6 +141,12 @@ def run(args):
         )
     if not checkpoint.is_file():
         raise FileNotFoundError(f"缺少 ImVoxelNet checkpoint: {checkpoint}")
+
+    # Keep the inference process on the same Conda C++ runtime as training.
+    conda_lib = Path(os.environ.get("CONDA_PREFIX", "")) / "lib"
+    if (conda_lib / "libstdc++.so.6").exists():
+        old_ld = os.environ.get("LD_LIBRARY_PATH", "")
+        os.environ["LD_LIBRARY_PATH"] = f"{conda_lib}:{old_ld}" if old_ld else str(conda_lib)
 
     info = load_info(info_path)
     entries = info["data_list"][: args.max_samples] if args.max_samples else info["data_list"]
@@ -152,7 +164,7 @@ def run(args):
     device = args.device
     model = init_model(str(CONFIG_PATH), str(checkpoint), device=device)
     class_names = list(model.dataset_meta.get("classes", ["Car"]))
-    infra_to_vehicle = make_cooperative_mappings()
+    infra_to_vehicle = make_cooperative_mappings(data_root)
     records = []
 
     with tempfile.TemporaryDirectory(prefix="dair_camera_imvoxelnet_") as temp_dir:
@@ -184,6 +196,7 @@ def run(args):
             "checkpoint": str(checkpoint),
             "config": str(CONFIG_PATH),
             "info_path": str(info_path),
+            "data_root": str(data_root),
             "num_samples": len(records),
             "total_pred_objects": sum(len(record["pred_objects"]) for record in records),
             "empty_samples": [record["sample_id"] for record in records if not record["pred_objects"]],
@@ -199,14 +212,16 @@ def run(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="运行 Vehicle/Infrastructure Camera-only ImVoxelNet 小样本推理")
+    parser = argparse.ArgumentParser(description="运行 Vehicle/Infrastructure Camera-only ImVoxelNet 推理")
     parser.add_argument("--sensor", choices=sorted(SENSORS), required=True)
-    parser.add_argument("--split", choices=["train", "val"], default="val")
+    parser.add_argument("--split", default="val", help="info 文件 split 名，例如 val 或 full_common_val")
     parser.add_argument("--max-samples", type=int, default=0, help="0 表示运行该 split 的全部样本")
     parser.add_argument("--score-threshold", type=float, default=0.1)
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--checkpoint", help="可选，自定义 checkpoint 路径")
     parser.add_argument("--output", help="可选，自定义 predictions JSON 路径")
+    parser.add_argument("--data-root", type=Path, default=DATA_ROOT, help="cooperative-vehicle-infrastructure 数据根目录")
+    parser.add_argument("--info-path", help="可选，覆盖 mmdet3d_camera_infos_<split>.pkl")
     run(parser.parse_args())
 
 

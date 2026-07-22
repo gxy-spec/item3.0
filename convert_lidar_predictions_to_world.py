@@ -96,6 +96,13 @@ SENSOR_CONFIGS = {
 }
 
 
+def configure_data_root(data_root):
+    """Switch calibration and cooperative mappings without changing default paths."""
+    global DATA_ROOT, COOP_INFO_PATH
+    DATA_ROOT = Path(data_root).resolve()
+    COOP_INFO_PATH = DATA_ROOT / "cooperative" / "data_info.json"
+
+
 def load_json(path):
     path = Path(path)
     if not path.exists():
@@ -141,7 +148,7 @@ def normalize_translation(translation):
     return t
 
 
-def make_transform(calib):
+def make_transform(calib, apply_relative_error=False):
     if "rotation" in calib and "translation" in calib:
         R = normalize_rotation(calib["rotation"])
         t = normalize_translation(calib["translation"])
@@ -155,6 +162,20 @@ def make_transform(calib):
     T = np.eye(4, dtype=float)
     T[:3, :3] = R
     T[:3, 3] = t
+
+    # The official DAIR-V2X infrastructure converter applies this systematic
+    # world-frame offset after virtuallidar -> world rotation/translation.
+    if apply_relative_error:
+        relative_error = calib.get("relative_error", {})
+        if not isinstance(relative_error, dict):
+            raise ValueError("relative_error 必须是 dict")
+        delta_x = float(relative_error.get("delta_x", 0.0))
+        delta_y = float(relative_error.get("delta_y", 0.0))
+        if not math.isfinite(delta_x) or not math.isfinite(delta_y):
+            raise ValueError("relative_error.delta_x/delta_y 必须是有限数值")
+        T[0, 3] += delta_x
+        T[1, 3] += delta_y
+
     return T
 
 
@@ -270,7 +291,7 @@ def get_infrastructure_lidar_to_world(infrastructure_id):
         / f"{infrastructure_id}.json",
         "infrastructure_lidar/virtuallidar -> world",
     )
-    return make_transform(load_json(calib_path))
+    return make_transform(load_json(calib_path), apply_relative_error=True)
 
 
 def get_lidar_to_world_transform(sensor, sample_info):
@@ -665,6 +686,8 @@ def convert_lidar_predictions_to_world(sensor, input_path=None, output_path=None
         "num_output_samples": len(world_records),
         "num_world_objects": converted_objects,
         "coordinate_transform": config["coordinate_transform"],
+        "infrastructure_relative_error_applied": sensor
+        in {"infrastructure_lidar", "infrastructure_camera"},
     }
 
     save_world_predictions(
@@ -706,12 +729,19 @@ def parse_args():
         default=None,
         help="可选：覆盖默认输出 predictions_world_summary.json 路径。",
     )
+    parser.add_argument(
+        "--data-root",
+        default=None,
+        help="可选：覆盖 DAIR_V2X_C_ROOT，用于 Full Dataset 标定和 cooperative 映射。",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
     try:
+        if args.data_root:
+            configure_data_root(args.data_root)
         convert_lidar_predictions_to_world(
             sensor=args.sensor,
             input_path=args.input,

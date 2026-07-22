@@ -77,6 +77,19 @@ model = dict(
         ranges=[[0, -39.68, -3.08, 92.16, 39.68, 0.76]],
         rotations=[0.0],
     ),
+    train_cfg=dict(
+        assigner=dict(
+            type="Max3DIoUAssigner",
+            iou_calculator=dict(type="BboxOverlapsNearest3D"),
+            pos_iou_thr=0.6,
+            neg_iou_thr=0.45,
+            min_pos_iou=0.45,
+            ignore_iof_thr=-1,
+        ),
+        allowed_border=0,
+        pos_weight=-1,
+        debug=False,
+    ),
     test_cfg=dict(
         use_rotate_nms=True,
         nms_across_levels=False,

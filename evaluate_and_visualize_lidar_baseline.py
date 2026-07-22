@@ -28,16 +28,17 @@ BASELINES = {
 }
 
 
-def get_paths(baseline):
-    root = BASELINES[baseline]["root"]
+def get_paths(baseline, output_root=None):
+    root = Path(output_root) if output_root else BASELINES[baseline]["root"]
     visualization_root = root / "visualization"
+    compact = output_root is not None
     return {
         "root": root,
         "predictions_world": root / "predictions_world.json",
-        "eval_csv": root / f"{baseline}_eval.csv",
-        "summary_json": root / f"{baseline}_eval_summary.json",
-        "details_json": root / f"{baseline}_eval_details.json",
-        "ap_summary_json": root / f"{baseline}_ap_summary.json",
+        "eval_csv": root / ("eval.csv" if compact else f"{baseline}_eval.csv"),
+        "summary_json": root / ("eval_summary.json" if compact else f"{baseline}_eval_summary.json"),
+        "details_json": root / ("eval_details.json" if compact else f"{baseline}_eval_details.json"),
+        "ap_summary_json": root / ("ap_summary.json" if compact else f"{baseline}_ap_summary.json"),
         "matched_pairs_csv": root / "matched_prediction_gt_pairs.csv",
         "per_class_metrics_csv": root / "per_class_metrics.csv",
         "confusion_matrix_csv": root / "class_confusion_matrix.csv",
@@ -87,12 +88,15 @@ def nullable_float(value):
     return None if pd.isna(value) else float(value)
 
 
-def evaluate_baseline(baseline):
+def evaluate_baseline(baseline, data_root=None, output_root=None, world_vis_mode="all"):
     if baseline not in BASELINES:
         raise ValueError(f"不支持的 baseline: {baseline}")
 
     config = BASELINES[baseline]
-    paths = get_paths(baseline)
+    paths = get_paths(baseline, output_root)
+    if data_root:
+        legacy.DATA_ROOT = Path(data_root).resolve()
+        legacy.COOP_INFO_PATH = legacy.DATA_ROOT / "cooperative" / "data_info.json"
     configure_legacy_visualization(paths)
     paths["world_vis_dir"].mkdir(parents=True, exist_ok=True)
     paths["summary_vis_dir"].mkdir(parents=True, exist_ok=True)
@@ -226,19 +230,20 @@ def evaluate_baseline(baseline):
             "metrics": row,
         })
 
-        legacy.plot_world_compare(
-            sample_id=sample_id,
-            gt_objects=gt_objects,
-            pred_objects=pred_objects,
-            matches=matches,
-            missed_gt=missed_gt,
-            false_pred=false_pred,
-            save_path=paths["world_vis_dir"] / f"sample_{idx:03d}_{sample_id}_world_compare.png",
-            classification_accuracy=classification_accuracy,
-            precision=precision,
-            recall=recall,
-            baseline_label=config["display_name"],
-        )
+        if world_vis_mode == "all":
+            legacy.plot_world_compare(
+                sample_id=sample_id,
+                gt_objects=gt_objects,
+                pred_objects=pred_objects,
+                matches=matches,
+                missed_gt=missed_gt,
+                false_pred=false_pred,
+                save_path=paths["world_vis_dir"] / f"sample_{idx:03d}_{sample_id}_world_compare.png",
+                classification_accuracy=classification_accuracy,
+                precision=precision,
+                recall=recall,
+                baseline_label=config["display_name"],
+            )
         print(
             f"[{idx + 1}/{len(predictions_world)}] {sample_id}: "
             f"GT={num_gt}, Pred={num_pred}, Match={num_match}, "
@@ -312,6 +317,7 @@ def evaluate_baseline(baseline):
         "confusion_matrix_path": str(paths["confusion_matrix_csv"]),
         "ap_summary_json": str(paths["ap_summary_json"]),
         "visualization_world_dir": str(paths["world_vis_dir"]),
+        "world_visualization_mode": world_vis_mode,
         "visualization_summary_dir": str(paths["summary_vis_dir"]),
         "class_confusion_matrix_png": str(paths["summary_vis_dir"] / "class_confusion_matrix.png"),
         "per_class_metrics_png": str(paths["summary_vis_dir"] / "per_class_precision_recall_f1.png"),
@@ -370,12 +376,28 @@ def parse_args():
         description="统一评价 Vehicle/Infrastructure LiDAR-only world 坐标预测。"
     )
     parser.add_argument("--baseline", required=True, choices=sorted(BASELINES))
+    parser.add_argument("--data-root", help="可选：Full Dataset cooperative-vehicle-infrastructure 根目录")
+    parser.add_argument(
+        "--output-root",
+        help="可选：覆盖 baseline 输出根目录；启用后输出 eval.csv/eval_summary.json 等紧凑名称。",
+    )
+    parser.add_argument(
+        "--world-vis-mode",
+        choices=["all", "none"],
+        default="all",
+        help="all 为每个样本生成 world 图；Full Dataset 建议用 none，后续生成代表帧图。",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    evaluate_baseline(args.baseline)
+    evaluate_baseline(
+        args.baseline,
+        data_root=args.data_root,
+        output_root=args.output_root,
+        world_vis_mode=args.world_vis_mode,
+    )
 
 
 if __name__ == "__main__":

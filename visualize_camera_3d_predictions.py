@@ -63,6 +63,12 @@ def save_json(path, data):
         json.dump(data, file, ensure_ascii=False, indent=2)
 
 
+def sample_key(sample_id):
+    """Match numeric sample IDs even if a CSV removed leading zeroes."""
+    value = str(sample_id).strip()
+    return str(int(value)) if value.isdigit() else value
+
+
 def make_transform(calibration):
     if "transform" in calibration:
         calibration = calibration["transform"]
@@ -202,9 +208,11 @@ def draw_legend(image, title, detail):
         cv2.line(image, (x, y - 4), (x + 20, y - 4), color, 3, cv2.LINE_AA)
         cv2.putText(image, text, (x + 28, y), cv2.FONT_HERSHEY_SIMPLEX, 0.39, (240, 240, 240), 1, cv2.LINE_AA)
     metrics = detail.get("metrics", {})
+    precision = metrics.get("precision") or 0.0
+    recall = metrics.get("recall") or 0.0
     text = "GT={} Pred={} Match={} P={:.3f} R={:.3f}".format(
         metrics.get("num_gt", 0), metrics.get("num_pred", 0), metrics.get("num_match", 0),
-        float(metrics.get("precision", 0.0)), float(metrics.get("recall", 0.0)),
+        float(precision), float(recall),
     )
     cv2.putText(image, text, (18, 116), cv2.FONT_HERSHEY_SIMPLEX, 0.39, (240, 240, 240), 1, cv2.LINE_AA)
 
@@ -284,38 +292,61 @@ def parse_args():
     parser.add_argument("--max-samples", type=int, default=0, help="only process the first N samples; 0 means all")
     parser.add_argument("--contact-sheet-columns", type=int, default=3)
     parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--data-root", type=Path, default=None, help="可选：Full Dataset 标准数据根目录")
+    parser.add_argument("--prediction-path", type=Path, default=None, help="可选：覆盖 predictions_<baseline>.json")
+    parser.add_argument("--details-path", type=Path, default=None, help="可选：覆盖 eval_details.json")
+    parser.add_argument(
+        "--sample-id-file",
+        type=Path,
+        default=None,
+        help="可选：每行一个 sample_id；仅投影这些代表帧。",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    global DATA_ROOT
+    if args.data_root:
+        DATA_ROOT = args.data_root.resolve()
     config = BASELINES[args.baseline]
     if args.contact_sheet_columns <= 0:
         raise ValueError("--contact-sheet-columns must be positive")
-    if not config["prediction_path"].exists() or not config["details_path"].exists():
+    prediction_path = args.prediction_path or config["prediction_path"]
+    details_path = args.details_path or config["details_path"]
+    if not prediction_path.exists() or not details_path.exists():
         raise FileNotFoundError(
             "missing predictions or evaluator details. Run camera inference, world conversion, and "
             f"evaluate_and_visualize_lidar_baseline.py --baseline {args.baseline} first."
         )
-    prediction_data = load_json(config["prediction_path"])
+    prediction_data = load_json(prediction_path)
     if isinstance(prediction_data, list):
         samples = prediction_data
     elif isinstance(prediction_data, dict):
         samples = prediction_data.get("samples", [])
     else:
         samples = []
+    if args.sample_id_file:
+        selected_ids = {
+            sample_key(line) for line in args.sample_id_file.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        }
+        samples = [sample for sample in samples if sample_key(sample.get("sample_id", "")) in selected_ids]
+        missing_ids = selected_ids - {sample_key(sample.get("sample_id", "")) for sample in samples}
+        if missing_ids:
+            print(f"[WARNING] {len(missing_ids)} selected sample_id is absent from predictions")
     if args.max_samples > 0:
         samples = samples[:args.max_samples]
     if not samples:
         raise ValueError(f"no samples in {config['prediction_path']}")
-    details_by_sample = {str(item["sample_id"]): item for item in load_json(config["details_path"])}
+    details_by_sample = {sample_key(item["sample_id"]): item for item in load_json(details_path)}
     output_root = args.output_dir or config["output_root"]
     image_dir, summary_dir = output_root / "image_3d_detection", output_root / "summary"
     written, skipped, counts = [], [], Counter()
     processed_details = []
     for index, sample in enumerate(samples, start=1):
         sample_id = str(sample.get("sample_id", ""))
-        detail = details_by_sample.get(sample_id)
+        detail = details_by_sample.get(sample_key(sample_id))
         if detail is None:
             message = "sample_id is absent from evaluator details"
             print(f"[WARNING] {sample_id}: {message}")
@@ -337,8 +368,8 @@ def main():
     summary = {
         "baseline": args.baseline,
         "baseline_name": config["name"],
-        "prediction_path": str(config["prediction_path"]),
-        "evaluation_details_path": str(config["details_path"]),
+        "prediction_path": str(prediction_path),
+        "evaluation_details_path": str(details_path),
         "num_samples_requested": len(samples),
         "num_images_written": len(written),
         "num_gt": sum(item.get("metrics", {}).get("num_gt", 0) for item in processed_details),

@@ -38,6 +38,7 @@ infrastructure-side LiDAR 点云
 - [实验一文档：Vehicle LiDAR-only 3D 检测 baseline](docs/experiment1_vehicle_lidar_baseline.md)
 - [Day1 文档：双 LiDAR baseline 构建、评价与对比](docs/day1_dual_lidar_baseline.md)
 - [Day2 文档：本机 Camera-only ImVoxelNet 小样本推理](docs/day2_camera_imvoxelnet_local_inference.md)
+- [Full Dataset 文档：四个真实单模态 baseline](docs/full_dataset_single_modal_baselines.md)
 - [统一预测 JSON 格式](docs/predictions_json_format.md)
 
 ## 当前研究状态与科学问题

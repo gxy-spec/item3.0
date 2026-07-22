@@ -23,6 +23,9 @@ outputs/baselines/infrastructure_lidar/*
 !outputs/baselines/day1_lidar_baseline_summary.csv
 !outputs/baselines/day1_lidar_baseline_summary.json
 
+# Reproducible figures and analysis caches
+results/
+
 # VS Code settings
 .vscode/
 notes/
